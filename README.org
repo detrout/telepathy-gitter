@@ -1,0 +1,11 @@
+* Introduction
+
+One of my colaborators wants to use gitter for managing
+all of her groups, I'd rather have a something that
+integrates with my local IM system, so an attempt and
+connecting to gitter.
+
+I may not ever actually implement useful things like
+authentication. My target is to connect to a room, see
+whats in it and send messages.
+
