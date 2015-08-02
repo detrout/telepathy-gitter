@@ -80,7 +80,7 @@ class GlitterApp(QObject):
 
 def force_connection(app):
     try:
-        from secret import *
+        from secret import token
     except ImportError:
         print("Please create a secret.py with token='gitter token'")
 
