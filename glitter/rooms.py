@@ -24,6 +24,7 @@ class Rooms(QObject):
     ready = pyqtSignal()
 
     def load(self):
+        logger.debug("load")
         url = QUrl("https://api.gitter.im/v1/rooms/")
         req = makeRequest(url, self._auth)
         self._resp = self._net.get(req)
@@ -34,7 +35,9 @@ class Rooms(QObject):
         rooms = readResponse(self._resp)
         for room in rooms:
             self._rooms[room['name']] = room
+        logger.debug("readResponse ready preemit")
         self.ready.emit()
+        logger.debug("readResponse ready postemit")
 
     # mapping interface
     def __getitem__(self, key):
@@ -137,9 +140,14 @@ class GitterClient(QObject):
         self._rooms.load()
 
     def rooms_initialized(self):
+        logger.debug("rooms initialized")
         self.connected.emit()
         self._rooms.ready.disconnect(self.rooms_initialized)
 
     def disconnect(self):
         self._refresh_timer.stop()
         self._rooms = None
+
+    @property
+    def rooms(self):
+        return self._rooms

@@ -72,6 +72,21 @@ class GlitterConnection(
             self._initial_personal_message = None
 
             logger.info("Connection to the account %s created" % account)
+
+            self._implement_property_get(
+                telepathy.CONNECTION,
+                {'Interfaces': self.GetInterfaces,
+                 'SelfHandle': lambda : int(self.GetSelfHandle()),
+                 #'SelfID':,
+                 'Status': self.GetStatus,
+                 'HasImmortalHandles': lambda : True,
+                 })
+
+            self._implement_property_get(
+                telepathy.CONNECTION_INTERFACE_REQUESTS,
+                {'Channels': self.GetRequestChannels,
+                 'RequestableChannelClasses': self.GetRequestableChannelClasses,
+                 })
         except Exception as e:
             logger.exception("Failed to create Connection: %s" % (str(e),))
             raise e
@@ -91,6 +106,8 @@ class GlitterConnection(
     def Connect(self, sender):
         if self._status == telepathy.CONNECTION_STATUS_DISCONNECTED:
             logger.info("Connecting")
+            self.StatusChanged(telepathy.CONNECTION_STATUS_CONNECTING,
+                               telepathy.CONNECTION_STATUS_REASON_NONE_SPECIFIED)
             self.__disconnect_reason = telepathy.CONNECTION_STATUS_REASON_NONE_SPECIFIED
             self._gitter_client = GitterClient(self, self._account['token'])
             print(self._gitter_client)
@@ -103,6 +120,8 @@ class GlitterConnection(
         self.StatusChanged(telepathy.CONNECTION_STATUS_CONNECTED,
                            telepathy.CONNECTION_STATUS_REASON_NONE_SPECIFIED)
         self.update_handles(sender)
+        self.check_connected()
+        self._populate_capabilities()
 
     def Disconnect(self):
         logger.info("Disconnecting")
@@ -117,20 +136,6 @@ class GlitterConnection(
             self.__disconnect_reason)
         self._channel_manager.close()
         self._manager.disconnected(self)
-
-    def GetInterfaces(self):
-        # The self._interfaces set is only ever touched in GlitterConnection.__init__,
-        # where connection interfaces are added.
-
-        # The mail notification interface is added then too, but also removed in its
-        # GlitterMailNotification.__init__ because it might not actually be available.
-        # It is added before the connection status turns to connected, if available.
-
-        # The spec denotes that this method can return a subset of the actually
-        # available interfaces before connected. As the only possible change will
-        # be adding the mail notification interface before connecting, this is fine.
-
-        return self._interfaces
 
     def _generate_props(self, channel_type, handle, suppress_handler, initiator_handle=None):
         props = {
@@ -166,3 +171,32 @@ class GlitterConnection(
 
         _success(channel._object_path)
         self.signal_new_channels([channel])
+
+    @dbus.service.method(dbus_interface=dbus.PROPERTIES_IFACE, in_signature='s', out_signature='a{sv}')
+    def GetAll(self, interface_name):
+        logger.debug("GetAll: %s %d", interface_name, self._status)
+        return super().GetAll(interface_name)
+
+
+    ### Connection Interface Requests
+    def CreateChannel(self, request):
+        return {}
+
+    def EnsureChannel(self, request):
+        return (False, '', {})
+
+    def GetRequestChannels(self):
+        return dbus.Dictionary({}, signature="oa{sv}")
+
+    # response a(a{sv}as)
+    def GetRequestableChannelClasses(self):
+        classes = dbus.Dictionary({
+            'org.freedesktop.Telepathy.Channel.Type.Text': 1,
+            'org.freedesktop.Telepathy.Channel.Type.Text': 2,
+        }, signature="sv")
+        allowed = dbus.Array(
+            ['org.freedesktop.Telepathy.Channel.TargetHandle',
+             'org.freedesktop.Telepathy.Channel.TargetID'
+            ], signature="s")
+        struct = dbus.Struct((classes, allowed), signature="a{sv}as")
+        return dbus.Array((struct,), signature="(a{sv}as)")

@@ -75,7 +75,6 @@ class GlitterCapabilities(
     def __init__(self):
         telepathy.server.ConnectionInterfaceCapabilities.__init__(self)
         telepathy.server.ConnectionInterfaceContactCapabilities.__init__(self)
-        #papyon.event.ContactEventInterface.__init__(self, self.msn_client)
 
         self._video_clients = []
         self._update_capabilities_calls = []
@@ -95,10 +94,9 @@ class GlitterCapabilities(
     def on_addressbook_contact_added(self, contact):
         """When we add a contact in our contact list, add the
         default capabilities to the contact"""
-        if contact.is_member(): #papyon.Membership.FORWARD):
-            handle = self.ensure_contact_handle(contact)
-            self._add_default_capabilities([handle])
-            self._update_contact_capabilities([handle])
+        handle = self.ensure_contact_handle(contact)
+        self._add_default_capabilities([handle])
+        self._update_contact_capabilities([handle])
 
 
     ### Capabilities interface -----------------------------------------------
@@ -146,14 +144,14 @@ class GlitterCapabilities(
     ### ContactCapabilities interface ----------------------------------------
 
     def AdvertiseCapabilities(self, add, remove):
-        for caps, specs in add:
-            if caps == telepathy.CHANNEL_TYPE_STREAMED_MEDIA:
-                if specs & telepathy.CHANNEL_MEDIA_CAPABILITY_VIDEO:
-                    self._msn_client.profile.client_id.has_webcam = True
-                    self._msn_client.profile.client_id.supports_rtc_video = True
-        for caps in remove:
-            if caps == telepathy.CHANNEL_TYPE_STREAMED_MEDIA:
-                self._msn_client.profile.client_id.has_webcam = False
+        #for caps, specs in add:
+        #    if caps == telepathy.CHANNEL_TYPE_STREAMED_MEDIA:
+        #        if specs & telepathy.CHANNEL_MEDIA_CAPABILITY_VIDEO:
+        #            self._msn_client.profile.client_id.has_webcam = True
+        #            self._msn_client.profile.client_id.supports_rtc_video = True
+        #for caps in remove:
+        #    if caps == telepathy.CHANNEL_TYPE_STREAMED_MEDIA:
+        #        self._msn_client.profile.client_id.has_webcam = False
 
         return telepathy.server.ConnectionInterfaceCapabilities.\
             AdvertiseCapabilities(self, add, remove)
@@ -188,11 +186,11 @@ class GlitterCapabilities(
             changed = True
 
         # We want video.
-        if video and (not self._msn_client.profile.client_id.has_webcam or
-           not self._msn_client.profile.client_id.supports_rtc_video):
-            self._msn_client.profile.client_id.has_webcam = True
-            self._msn_client.profile.client_id.supports_rtc_video = True
-            changed = True
+        #if video and (not self._msn_client.profile.client_id.has_webcam or
+        #   not self._msn_client.profile.client_id.supports_rtc_video):
+        #    self._msn_client.profile.client_id.has_webcam = True
+        #    self._msn_client.profile.client_id.supports_rtc_video = True
+        #    changed = True
 
         # Signal.
         if changed:
@@ -202,25 +200,43 @@ class GlitterCapabilities(
 
     def _get_contact_capabilities(self, contact):
         contact_caps = []
-        caps = contact.client_capabilities
 
         contact_caps.append(self.text_chat_class)
-        contact_caps.append(self.file_transfer_class)
-        if caps.supports_sip_invite:
-            if caps.has_webcam:
-                contact_caps.append(self.av_chat_class)
-            else:
-                contact_caps.append(self.audio_chat_class)
 
         return contact_caps
 
     def _update_contact_capabilities(self, handles):
         caps = {}
         for handle in handles:
-            caps[handle] = self._get_contact_capabilities(handle.contact)
+            caps[handle] = self._get_contact_capabilities(handle)
             self._contact_caps[handle] = caps[handle] # update global dict
         ret = dbus.Dictionary(caps, signature='ua(a{sv}as)')
         self.ContactCapabilitiesChanged(ret)
+
+
+    ### Start ContactCapabilities
+    @dbus.service.method(
+        dbus_interface=telepathy.CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+        in_signature="au",
+        out_signature="a{ua(a{sv}as)}")
+    def GetContactCapabilities(self, handles):
+        logger.debug("GetContactCapabilities: (in) %s", str(handles))
+        handles = set(handles)
+        if 0 in handles:
+            handles.remove(0)
+
+        ret = dbus.Dictionary(signature="u(a{sv}as)")
+        channels = dbus.Dictionary(signature="sv")
+        channels['org.freedesktop.Telepathy.Channel.TargetHandleType'] = telepathy.HANDLE_TYPE_CONTACT
+        channels['org.freedesktop.Telepathy.Channel.ChannelType'] = \
+             'org.freedesktop.Telepathy.Channel.Type.Text'
+        interfaces = dbus.Array(['org.freedesktop.Telepathy.Channel.TargetHandle'], signature="s")
+        struct = dbus.Struct((channels, interfaces), signature="(a{sv}as)")
+        for h in handles:
+            ret[int(h)] = dbus.Array([struct,], signature="(a{sv}as)")   # (channels, interfaces)
+
+        return ret
+    ### End ContactCapabilities
 
 
     ### Initialization -------------------------------------------------------
@@ -230,10 +246,8 @@ class GlitterCapabilities(
         """ Add the default capabilities to all contacts in our
         contacts list."""
         handles = set([self._self_handle])
-        for contact in self.msn_client.address_book.contacts:
-            if contact.is_member():  #papyon.Membership.FORWARD):
-                handle = self.ensure_contact_handle(contact)
-                handles.add(handle)
+        for contact in self._contact_handles:
+            handles.add(contact)
         self._add_default_capabilities(handles)
         self._update_contact_capabilities(handles)
 

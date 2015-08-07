@@ -39,7 +39,7 @@ class GlitterConnectionManager(telepathy.server.ConnectionManager):
     def __init__(self, shutdown_func=None):
         "Initializer"
         telepathy.server.ConnectionManager.__init__(self, 'glitter')
-        
+
         self._implement_protocol('gitter', GlitterProtocol)
 
         self._shutdown = shutdown_func
