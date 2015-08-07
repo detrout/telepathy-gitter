@@ -39,8 +39,6 @@ class GlitterApp(QObject):
             self._bus_name = bus_name
             self._object_path = object_path
             self._protocol = protocol
-
-            #QTimer().singleShot(0, self.test_gitter)
         else:
             logger.debug("Other protocol: %s %s", protocol, bus_name)
 
@@ -84,13 +82,16 @@ def force_connection(app):
     except ImportError:
         print("Please create a secret.py with token='gitter token'")
 
-    conn = app.cm.RequestConnection('gitter', {'account': 'detrout0', 'token': token})
+    conn = app.cm.RequestConnection('gitter', {'account': 'detrout', 'token': token})
+    # cheating
+    QTimer().singleShot(500, app.test_gitter)
+    QTimer().singleShot(5000, app.quit)
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
 
     app = GlitterApp(sys.argv)
-    #QTimer().singleShot(5000, app.quit)
+    #force_connection(app)
     app.exec_()
 
 if __name__ == "__main__":
