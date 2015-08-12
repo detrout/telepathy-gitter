@@ -153,8 +153,10 @@ class GlitterConnection(
         return props
 
 
-    @dbus.service.method(telepathy.CONNECTION, in_signature='suub',
-        out_signature='o', async_callbacks=('_success', '_error'))
+    @dbus.service.method(telepathy.CONNECTION,
+                         in_signature='suub',
+                         out_signature='o',
+                         async_callbacks=('_success', '_error'))
     def RequestChannel(self, type, handle_type, handle_id, suppress_handler,
             _success, _error):
         self.check_connected()
