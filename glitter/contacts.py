@@ -232,7 +232,7 @@ class GlitterContacts(
 
     ### Start ContactGroups
     def GetContactGroups(self, handle_type, handles):
-        return [ [] for h in handles ] 
+        return [dbus.Array([], signature="s") for h in handles]
 
     ### End ContactGroups
     ### Start ContactBlocking
