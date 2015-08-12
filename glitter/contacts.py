@@ -293,20 +293,22 @@ class GlitterContacts(
         dbus_interface=telepathy.CONNECTION_INTERFACE_SIMPLE_PRESENCE,
         in_signature="au",
         out_signature="a{u(uss)}")
-    def GetPresences(self, contacts):
-        logger.debug("GetPresences: %s", contacts)
+    def GetPresences(self, handles):
+        logger.debug("GetPresences: %s", handles)
         ret = dbus.Dictionary(signature="u(uss)")
-        for contact in contacts:
+        for handle in handles:
             # return our status
-            if contact == self._self_handle:
+            if handle == int(self._self_handle):
                 status_id = getattr(self, "_simple_presence_status", None)
-                status = GlitterContacts.id_to_presence(status_id, None)
+                if status_id is None:
+                    status_id = telepathy.CONNECTION_PRESENCE_TYPE_OFFLINE
+                status = GlitterContacts.id_to_presence[status_id]
                 message = getattr(self, "_simple_presence_message", "")
             else:
                 status_id = telepathy.CONNECTION_PRESENCE_TYPE_AVAILABLE
                 status = "available"
                 message = ""
-            ret[contact] = dbus.Struct((status_id, status, message),
+            ret[handle] = dbus.Struct((status_id, status, message),
                                        signature="(uss)")
 
         logger.debug("GetPresences ret: %s", pformat(ret))
