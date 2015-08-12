@@ -24,6 +24,7 @@ import telepathy
 import telepathy.errors
 import dbus
 
+
 from telepathy.constants import (
     CONTACT_LIST_STATE_NONE,
     CONTACT_LIST_STATE_WAITING,
