@@ -76,10 +76,10 @@ class GlitterConnection(
             self._implement_property_get(
                 telepathy.CONNECTION,
                 {'Interfaces': self.GetInterfaces,
-                 'SelfHandle': lambda : int(self.GetSelfHandle()),
+                 'SelfHandle': lambda: int(self.GetSelfHandle()),
                  #'SelfID':,
                  'Status': self.GetStatus,
-                 'HasImmortalHandles': lambda : True,
+                 'HasImmortalHandles': lambda: True,
                  })
 
             self._implement_property_get(
