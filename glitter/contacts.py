@@ -88,6 +88,13 @@ class GlitterContacts(
             })
 
         self._implement_property_get(
+            telepathy.CONNECTION_INTERFACE_CONTACT_GROUPS,
+            {'DisjointGroups': lambda: True,
+             'GroupStorage': lambda: telepathy.CONTACT_METADATA_STORAGE_TYPE_NONE,
+             'Groups': lambda: dbus.Array([], signature="s")
+        })
+
+        self._implement_property_get(
             telepathy.CONNECTION_INTERFACE_CONTACT_BLOCKING,
             {'ContactBlockingCapabilities': lambda: 0}
         )

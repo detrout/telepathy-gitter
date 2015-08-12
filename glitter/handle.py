@@ -41,10 +41,12 @@ class GlitterHandle(telepathy.server.Handle):
         self._conn = weakref.proxy(connection)
 
     def __str__(self):
-        type_mapping = {telepathy.HANDLE_TYPE_CONTACT : 'Contact',
-                telepathy.HANDLE_TYPE_ROOM : 'Room',
-                telepathy.HANDLE_TYPE_LIST : 'List',
-                telepathy.HANDLE_TYPE_GROUP : 'Group'}
+        type_mapping = {
+            telepathy.HANDLE_TYPE_CONTACT: 'Contact',
+            telepathy.HANDLE_TYPE_ROOM: 'Room',
+            telepathy.HANDLE_TYPE_LIST: 'List',
+            telepathy.HANDLE_TYPE_GROUP: 'Group'
+        }
         type_str = type_mapping.get(self.type, '')
         return "<Glitter%sHandle id=%u name='%s'>" % \
             (type_str, self.id, self.name)
