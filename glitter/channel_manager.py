@@ -72,6 +72,7 @@ def escape_as_identifier(identifier):
 
     return ''.join(ret)
 
+
 class GlitterChannelManager(telepathy.server.ChannelManager):
     __text_channel_id = 1
     __media_channel_id = 1
@@ -82,7 +83,8 @@ class GlitterChannelManager(telepathy.server.ChannelManager):
 
         self.set_requestable_channel_classes(protocol.requestable_channels)
 
-        self.implement_channel_classes(telepathy.CHANNEL_TYPE_TEXT, self._get_text_channel)
+        self.implement_channel_classes(telepathy.CHANNEL_TYPE_TEXT,
+                                       self._get_text_channel)
 
     def _get_text_channel(self, props, conversation=None):
         _, surpress_handler, handle = self._get_type_requested_handle(props)
