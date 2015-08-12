@@ -60,7 +60,7 @@ class GlitterContactHandle(GlitterHandle):
 
         if contact is None:
             contact_account = contact_name.lower()
-            contact_network = papyon.NetworkID.MSN
+            #contact_network = papyon.NetworkID.MSN
             for network, extension in network_to_extension.items():
                 if contact_name.endswith(extension):
                     contact_account = contact_name[0:-len(extension)]
