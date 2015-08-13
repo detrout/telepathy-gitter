@@ -1,12 +1,9 @@
-import itertools
 import logging
 from pprint import pformat
 from PyQt5.QtCore import (
     QUrl, QUrlQuery, QTimer, QObject, pyqtSlot, pyqtSignal
 )
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
-import telepathy
-
 from .grequests import makeRequest, readResponse, readLongResponse
 
 logger = logging.getLogger(__name__)
