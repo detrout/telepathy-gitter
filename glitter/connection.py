@@ -85,7 +85,7 @@ class GlitterConnection(
             self._implement_property_get(
                 telepathy.CONNECTION_INTERFACE_REQUESTS,
                 {'Channels': self.GetRequestChannels,
-                 'RequestableChannelClasses': self.GetRequestableChannelClasses,
+                 'RequestableChannelClasses': self._channel_manager.get_requestable_channel_classes,
                  })
         except Exception as e:
             logger.exception("Failed to create Connection: %s" % (str(e),))
