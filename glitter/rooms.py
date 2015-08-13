@@ -49,6 +49,10 @@ class Rooms(GitterObject):
             self._rooms[room['name']] = Room(self._net, self._auth, json=room)
         self.ready.emit()
 
+    def disconnect(self):
+        for room in self._rooms:
+            room.disconnect()
+
     # mapping interface
     def __getitem__(self, key):
         return self._rooms[key]
@@ -302,7 +306,7 @@ class GitterClient(QObject):
 
     def disconnect(self):
         self._refresh_timer.stop()
-        self._rooms = None
+        self._rooms.disconnect()
 
     @property
     def rooms(self):
