@@ -1,5 +1,8 @@
 import logging
 from pprint import pformat
+import json
+import collections
+
 from PyQt5.QtCore import (
     QUrl, QUrlQuery, QTimer, QObject, pyqtSlot, pyqtSignal
 )
@@ -88,7 +91,8 @@ class Room(GitterObject):
         super().__init__()
         self._net = net
         self._auth = auth
-        self._messages = {}
+        self._messages = Messages(self)
+        self._outbox = {}
         self._events = None
 
         self.id = None
@@ -132,6 +136,8 @@ class Room(GitterObject):
             query.addQueryItem("beforeId", str(beforeId))
         if afterId:
             query.addQueryItem("afterId", str(afterId))
+        elif self._messages.last_id():
+            query.addQueryItem("afterId", str(self._messages.last_id()))
         if limit:
             query.addQueryItem("limit", str(limit))
 
@@ -167,14 +173,68 @@ class Room(GitterObject):
         """Receive an event from the socket
         """
         json_message = readLongResponse(response)
-        logger.debug('receiveEvent: %s', pformat(json_message))
+        logger.debug('receiveMessage: %s', pformat(json_message))
         if json_message:
             message = Message(json=json_message)
             self._messages[message.id] = message
+            self.messagesReady.emit([message.id])
 
-    def closeMessageStream(self):
+    def disconnect(self):
         if isinstance(self._events, QNetworkRequest):
             self._events.finished.disconnect(self.startEventStream)
+
+    def sendMessage(self, text):
+        url = QUrl(
+            "https://api.gitter.im/v1/rooms/{}/chatMessages".format(self.id)
+        )
+        body = {'text': text}
+        message = json.dumps(body)
+        logger.debug('sendMessage: %s', message)
+        req = makeRequest(url, self._auth)
+        req.setRawHeader('Content-Type', 'application/json')
+        reply = self._net.post(req, message)
+        self._net.finished.connect(lambda: self.sentMessage(reply))
+
+    def sentMessage(self, reply):
+        data = readResponse(reply)
+        logger.debug("sentMessage: %s", pformat(data))
+        if data:
+            message = Message(json=data)
+            self._messages[message.id] = message
+            self.messagesReady.emit([message.id])
+
+
+class Messages(collections.MutableMapping):
+    def __init__(self, room):
+        super().__init__()
+        self._room = room
+        self._messages = collections.OrderedDict()
+
+    def __getitem__(self, key):
+        return self._messages[key]
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, Message):
+            raise ValueError("We only store Messages")
+        self._messages[key] = value
+
+    def __delitem__(self, key):
+        del self._messages[key]
+
+    def __iter__(self):
+        return iter(self._messages)
+
+    def __len__(self):
+        return len(self._messages)
+
+    def last_id(self):
+        if len(self._messages) > 0:
+            return self._messages[-1].id
+
+    def earliest_id(self):
+        if len(self._messages) > 0:
+            return self._messages[0].id
+
 
 class Message(GitterObject):
     def __init__(self, json=None):
