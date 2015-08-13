@@ -109,18 +109,34 @@ class GlitterContacts(
         return list(self.attributes.keys())
 
     def update_handles(self, sender):
-        self._contact_handles = self.RequestHandles(
-            telepathy.HANDLE_TYPE_CONTACT,
-            self._gitter_client._rooms,
-            sender=sender)
+        self.newContactHandles(self._gitter_client._rooms, sender)
         state = (SUBSCRIPTION_STATE_YES, SUBSCRIPTION_STATE_YES, '')
         changes = {h: state for h in self._contact_handles}
-        identifiers = dict(zip(self._contact_handles,
-                               self._gitter_client._rooms))
         removals = {}
         self.contact_list_state = CONTACT_LIST_STATE_SUCCESS
-        self.ContactsChangedWithID(changes, identifiers, removals)
+        self.ContactsChangedWithID(changes, self._contact_handles, removals)
         self.ContactsChanged(changes, removals)
+
+    def ensureContactHandle(self, contact, sender):
+        """Find contact handle, allocate new one if not available
+        """
+        for handle in self._contact_handles:
+            if contact == self._contact_handles[handle]:
+                return handle
+
+        newContactHandle(self, [contact], sender)
+
+    def newContactHandles(self, contacts, sender):
+        logger.debug("newContactHandles: %s", contacts)
+        if not hasattr(self, '_contact_handles'):
+            self._contact_handles = {}
+
+        handles = self.RequestHandles(
+            telepathy.HANDLE_TYPE_CONTACT,
+            contacts,
+            sender=sender)
+        for handle, name in zip(handles, contacts):
+            self._contact_handles[handle] = name
 
     ### Start Contacts
     # Overwrite the dbus attribute to get the sender argument
