@@ -181,24 +181,56 @@ class GlitterConnection(
 
 
     ### Connection Interface Requests
-    def CreateChannel(self, request):
-        return {}
+    @dbus.service.method(
+        dbus_interface=telepathy.CONNECTION_INTERFACE_REQUESTS,
+        in_signature='a{sv}',
+        out_signature='oa{sv}',
+        async_callbacks=('_success', '_error'))
+    def CreateChannel(self, request, _success, _error):
+        self.check_connected()
+        for k, v in request:
+            print('Create',k, v)
+        channel = request.get(telepathy.CHANNEL_INTERFACE + '.ChannelType', None)
+        target_type = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandleTypee', None)
+        handle = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle', None)
+        targetid = request.get(telepathy.CHANNEL_INTERFACE + '.TargetID', None)
+        if handle is None and targetid is None:
+            raise InvalidHandle()
+        elif handle is None:
+            pass
+        elif targetid is None:
+            handle = self.ensure_contact_handle(targetid)
+        raise NotImplemented()
 
-    def EnsureChannel(self, request):
-        return (False, '', {})
+    @dbus.service.method(
+        dbus_interface=telepathy.CONNECTION_INTERFACE_REQUESTS,
+        in_signature='a{sv}',
+        out_signature='boa{sv}',
+        async_callbacks=('_success', '_error'))
+    def EnsureChannel(self, request, _success, _error):
+        logger.debug("EnsureChannel")
+        self.check_connected()
+        for key in request:
+            print(key, request[key])
+        channel_manager = self._channel_manager
+
+        if handle_id == telepathy.HANDLE_TYPE_NONE:
+            handle = telepathy.server.handle.NoneHandle()
+        else:
+            handle = self.handle(handle_type, handle_id)
+        props = self._generate_props(type, handle, suppress_handler)
+        self._validate_handle(props)
+
+        channel = channel_manager.channel_for_props(request, signal=False)
+
+        _success(True, channel._object_path, channel.get_immutable_properties())
+        self.signal_new_channels([channel])
 
     def GetRequestChannels(self):
-        return dbus.Dictionary({}, signature="oa{sv}")
+        ret = dbus.Dictionary({}, signature="oa{sv}")
+        channels = self.ListChannels()
+        for channel in channels:
+            props = self._generate_props(channel._type, channel._handle, True)
+            ret[channel._object_path] = props
 
-    # response a(a{sv}as)
-    def GetRequestableChannelClasses(self):
-        classes = dbus.Dictionary({
-            'org.freedesktop.Telepathy.Channel.Type.Text': 1,
-            'org.freedesktop.Telepathy.Channel.Type.Text': 2,
-        }, signature="sv")
-        allowed = dbus.Array(
-            ['org.freedesktop.Telepathy.Channel.TargetHandle',
-             'org.freedesktop.Telepathy.Channel.TargetID'
-            ], signature="s")
-        struct = dbus.Struct((classes, allowed), signature="a{sv}as")
-        return dbus.Array((struct,), signature="(a{sv}as)")
+        return ret
