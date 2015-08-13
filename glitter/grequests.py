@@ -14,15 +14,26 @@ def makeRequest(url, token):
 
 
 def readResponse(resp):
-    body = bytes(resp.readAll())
-    # FIXME: figure out actual content type
-    jsonobj = json.loads(body.decode('utf-8'))
-    return jsonobj
+    error = resp.error()
+    data = resp.readAll()
+    if error == 0:
+        # logger.debug("readResponse: %s", data)
+        if len(data) > 0:
+            body = bytes(data)
+            # FIXME: figure out actual content type
+            jsonobj = json.loads(body.decode('utf-8'))
+            return jsonobj
+    else:
+        logger.error('Error: %s', data)
 
 
 def readLongResponse(resp):
+    error = resp.error()
     line = bytes(resp.readLine())
-    line = line.decode('utf-8').strip()
-    if len(line) > 0:
-        jsonobj = json.loads(line)
-        return jsonobj
+    if error == 0:
+        line = line.decode('utf-8').strip()
+        if len(line) > 0:
+            jsonobj = json.loads(line)
+            return jsonobj
+    else:
+        logger.error('Error: %s', line)
