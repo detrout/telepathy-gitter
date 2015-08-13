@@ -36,7 +36,6 @@ from telepathy.constants import (
     SUBSCRIPTION_STATE_REMOVED_REMOTELY,
     SUBSCRIPTION_STATE_ASK,
     SUBSCRIPTION_STATE_YES,
-    
 )
 
 __all__ = ['GlitterContacts']
