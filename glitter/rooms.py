@@ -1,19 +1,31 @@
 import itertools
 import logging
-
+from pprint import pformat
 from PyQt5.QtCore import (
-    QUrl, QTimer, QObject, pyqtSlot, pyqtSignal
+    QUrl, QUrlQuery, QTimer, QObject, pyqtSlot, pyqtSignal
 )
-from PyQt5.QtNetwork import QNetworkAccessManager
+from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 import telepathy
 
-from .grequests import makeRequest, readResponse
+from .grequests import makeRequest, readResponse, readLongResponse
 
 logger = logging.getLogger(__name__)
 
-class Rooms(QObject):
+
+class GitterObject(QObject):
+    def __init__(self):
+        super().__init__()
+
+    def safesetattr(self, name, value):
+        """Only set self.name=value for non-private attributes
+        """
+        if not name.startswith('_') and name in self.__dict__:
+            setattr(self, name, value)
+
+
+class Rooms(GitterObject):
     def __init__(self, net, auth, manager):
-        QObject.__init__(self)
+        super().__init__()
         self._net = net
         self._auth = auth
         self._manager = manager
@@ -27,17 +39,15 @@ class Rooms(QObject):
         logger.debug("load")
         url = QUrl("https://api.gitter.im/v1/rooms/")
         req = makeRequest(url, self._auth)
-        self._resp = self._net.get(req)
-        self._resp.readyRead.connect(self.readResponse)
+        resp = self._net.get(req)
+        resp.readyRead.connect(lambda: self.readResponse(resp))
 
     @pyqtSlot()
-    def readResponse(self):
-        rooms = readResponse(self._resp)
+    def readResponse(self, resp):
+        rooms = readResponse(resp)
         for room in rooms:
-            self._rooms[room['name']] = room
-        logger.debug("readResponse ready preemit")
+            self._rooms[room['name']] = Room(self._net, self._auth, json=room)
         self.ready.emit()
-        logger.debug("readResponse ready postemit")
 
     # mapping interface
     def __getitem__(self, key):
@@ -76,9 +86,13 @@ ROOM_ATTRIBUTES = ['id', 'name', 'topic', 'uri', 'oneToOne',
                    'lastAccessTime', 'lurk', 'url', 'githubType', 'v']
 
 
-class Room(QObject):
-    def __init__(self, json=None):
-        QObject.__init__(self)
+class Room(GitterObject):
+    def __init__(self, net, auth, json=None):
+        super().__init__()
+        self._net = net
+        self._auth = auth
+        self._messages = {}
+        self._events = None
 
         self.id = None
         self.name = None
@@ -99,21 +113,106 @@ class Room(QObject):
             self.readJson(json)
 
     ready = pyqtSignal()
+    messagesReady = pyqtSignal([int])
 
     def readJson(self, json):
-        for key in ROOM_ATTRIBUTES:
-            setattr(self, key, json[key])
+        for key in json:
+            self.safesetattr(key, json[key])
         self.ready.emit()
 
     def __str__(self):
         return self.name
 
+    def loadMessages(self, skip=None, beforeId=None, afterId=None, limit=50):
+        logger.debug("listMessages")
+        url = QUrl(
+            "https://api.gitter.im/v1/rooms/{}/chatMessages".format(self.id)
+        )
+        query = QUrlQuery()
+        if skip:
+            query.addQueryItem("skip", str(skip))
+        if beforeId:
+            query.addQueryItem("beforeId", str(beforeId))
+        if afterId:
+            query.addQueryItem("afterId", str(afterId))
+        if limit:
+            query.addQueryItem("limit", str(limit))
+
+        url.setQuery(query)
+        req = makeRequest(url, self._auth)
+        resp = self._net.get(req)
+        resp.finished.connect(lambda: self.readMessages(resp))
+
+    @pyqtSlot()
+    def readMessages(self, resp):
+        messages = readResponse(resp)
+        new_messages = []
+        for json_message in messages:
+            message = Message(json=json_message)
+            self._messages[message.id] = message
+            new_messages.append(message.id)
+        self.messagesReady.emit(new_messages)
+
+    def startMessageStream(self):
+        """Open a socket to this room and listen for events
+        """
+        logger.debug("startMessageStream")
+        url = QUrl(
+            "https://stream.gitter.im/v1/rooms/{}/chatMessages".format(self.id)
+        )
+        req = makeRequest(url, self._auth)
+        self._events = self._net.get(req)
+        self._events.readyRead.connect(
+            lambda: self.receiveMessageStream(self._events))
+        self._events.finished.connect(self.startMessageStream)
+
+    def receiveMessageStream(self, response):
+        """Receive an event from the socket
+        """
+        json_message = readLongResponse(response)
+        logger.debug('receiveEvent: %s', pformat(json_message))
+        if json_message:
+            message = Message(json=json_message)
+            self._messages[message.id] = message
+
+    def closeMessageStream(self):
+        if isinstance(self._events, QNetworkRequest):
+            self._events.finished.disconnect(self.startEventStream)
+
+class Message(GitterObject):
+    def __init__(self, json=None):
+        super().__init__()
+
+        self.id = None
+        self.text = None
+        self.html = None
+        self.sent = None
+        self.editedAt = None
+        self.fromUser = None
+        self.unread = None
+        self.readBy = None
+        self.urls = None
+        self.mentions = None
+        self.issues = None
+        self.meta = None
+        self.v = None
+
+        if json:
+            self.loadJson(json)
+
+    ready = pyqtSignal()
+
+    def loadJson(self, json):
+        for key in json:
+            self.safesetattr(key, json[key])
+        self.ready.emit()
+        print(self.sent, self.text)
 
 class GitterClient(QObject):
     """Manage a connection to Gitter
     """
     def __init__(self, manager, auth):
-        QObject.__init__(self)
+        super().__init__()
         self._manager = manager
         self._auth = auth
         self._rooms = None
