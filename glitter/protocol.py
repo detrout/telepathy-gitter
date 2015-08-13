@@ -29,9 +29,10 @@ __all__ = ['GlitterProtocol']
 
 logger = logging.getLogger('Glitter.Protocol')
 
-class GlitterProtocol(telepathy.server.Protocol,
-                        telepathy.server.ProtocolInterfacePresence):
 
+class GlitterProtocol(
+        telepathy.server.Protocol,
+        telepathy.server.ProtocolInterfacePresence):
     _proto = "gitter"
     _vcard_field = ""
     _english_name = "Gitter"
@@ -77,7 +78,6 @@ class GlitterProtocol(telepathy.server.Protocol,
 
     _statuses = {
             }
-
 
     def __init__(self, connection_manager):
         telepathy.server.Protocol.__init__(self, connection_manager, 'gitter')
