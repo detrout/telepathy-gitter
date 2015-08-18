@@ -50,7 +50,7 @@ class GlitterConnectionManager(telepathy.server.ConnectionManager):
                     len(self._connections) == 0:
                 self._shutdown()
             return False
-        result = telepathy.server.ConnectionManager.disconnected(self, conn)
+        telepathy.server.ConnectionManager.disconnected(self, conn)
         QTimer().singleShot(5000, shutdown)
 
     def quit(self):
