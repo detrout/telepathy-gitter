@@ -32,7 +32,7 @@ logger = logging.getLogger('Glitter.ConnectionManager')
 
 class GlitterConnectionManager(telepathy.server.ConnectionManager):
     """Gitter connection manager
-    
+
     Implements the org.freedesktop.Telepathy.ConnectionManager interface"""
 
     def __init__(self, shutdown_func=None):
