@@ -196,11 +196,11 @@ class GlitterConnection(
     def CreateChannel(self, request, _success, _error):
         self.check_connected()
         for k, v in request:
-            print('Create',k, v)
-        channel = request.get(telepathy.CHANNEL_INTERFACE + '.ChannelType', None)
-        target_type = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandleTypee', None)
-        handle = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle', None)
-        targetid = request.get(telepathy.CHANNEL_INTERFACE + '.TargetID', None)
+            print('Create', k, v)
+        channel = request.get(telepathy.CHANNEL_INTERFACE + '.ChannelType')
+        target_type = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandleTypee')
+        handle = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle')
+        targetid = request.get(telepathy.CHANNEL_INTERFACE + '.TargetID')
         if handle is None and targetid is None:
             raise InvalidHandle()
         elif handle is None:
