@@ -21,7 +21,6 @@
 
 import telepathy
 from PyQt5.QtCore import QTimer
-import dbus
 import logging
 
 from glitter.protocol import GlitterProtocol
