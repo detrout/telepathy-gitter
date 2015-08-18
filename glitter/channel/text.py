@@ -20,8 +20,6 @@
 
 import logging
 import weakref
-import time
-import re
 
 import dbus
 import telepathy
