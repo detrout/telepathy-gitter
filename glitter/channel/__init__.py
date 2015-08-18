@@ -41,7 +41,7 @@ class GlitterChannel(object):
 
         # If we don't have either of the above but we requested the channel,
         # then we're the initiator.
-        elif props[telepathy.CHANNEL_INTERFACE + '.Requested']:
+        elif props.get(telepathy.CHANNEL_INTERFACE + '.Requested'):
             self._initiator = conn.GetSelfHandle()
 
         else:
