@@ -99,6 +99,13 @@ class GlitterConnection(
     def gitter_client(self):
         return self._gitter_client
 
+    def roomFromHandle(self, handle):
+        """Retrieve a gitter client room given a telepathy handle
+        """
+        name = self._contact_handles.get(handle, None)
+        if name:
+            return self._gitter_client.rooms[name]
+
     @dbus.service.method(telepathy.CONN_INTERFACE,
                          in_signature='',
                          out_signature='',
