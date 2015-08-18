@@ -1,7 +1,9 @@
 import logging
 from pprint import pformat
+import datetime
 import json
 import collections
+import pytz
 
 from PyQt5.QtCore import (
     QUrl, QUrlQuery, QTimer, QObject, pyqtSlot, pyqtSignal
@@ -264,10 +266,22 @@ class Message(GitterObject):
     ready = pyqtSignal()
 
     def loadJson(self, json):
+        isoformat = "%Y-%m-%dT%H:%M:%S.%fZ"
+        utc = pytz.timezone('UTC')
         for key in json:
-            self.safesetattr(key, json[key])
+            value = json[key]
+            if key in ('sent', 'editedAt') and value is not None:
+                value = datetime.datetime.strptime(value, isoformat)
+                value = utc.localize(value)
+            self.safesetattr(key, value)
         self.ready.emit()
         print(self.sent, self.text)
+
+    @property
+    def timestamp(self):
+        if self.sent:
+            return int(self.sent.timestamp())
+
 
 class GitterClient(QObject):
     """Manage a connection to Gitter
