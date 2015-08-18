@@ -215,29 +215,37 @@ class GlitterConnection(
         out_signature='boa{sv}',
         async_callbacks=('_success', '_error'))
     def EnsureChannel(self, request, _success, _error):
-        logger.debug("EnsureChannel")
-        self.check_connected()
         for key in request:
-            print(key, request[key])
+            logger.debug("EnsureChannel: %s %s", str(key), str(request[key]))
+        self.check_connected()
+
         channel_manager = self._channel_manager
+        handle_id = request.get(telepathy.CHANNEL + '.TargetHandle')
+        handle_type = request.get(telepathy.CHANNEL + '.TargetHandleType')
+        channel_type = request.get(telepathy.CHANNEL + '.ChannelType')
 
         if handle_id == telepathy.HANDLE_TYPE_NONE:
             handle = telepathy.server.handle.NoneHandle()
         else:
             handle = self.handle(handle_type, handle_id)
-        props = self._generate_props(type, handle, suppress_handler)
+
+        props = self._generate_props(channel_type, handle, True)
         self._validate_handle(props)
 
-        channel = channel_manager.channel_for_props(request, signal=False)
+        yours, channel = channel_manager.channel_for_props(
+            request,
+            signal=False)
 
-        _success(True, channel._object_path, channel.get_immutable_properties())
+        print(_success)
+        _success(yours, channel._object_path,
+                 channel.get_immutable_properties())
         self.signal_new_channels([channel])
 
     def GetRequestChannels(self):
-        ret = dbus.Dictionary({}, signature="oa{sv}")
+        ret = dbus.Array([], signature="(oa{sv})")
         channels = self.ListChannels()
         for channel in channels:
             props = self._generate_props(channel._type, channel._handle, True)
-            ret[channel._object_path] = props
-
+            ret.append(dbus.Struct([channel._object_path, props],
+                                   signature="oa{sv}"))
         return ret

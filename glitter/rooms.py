@@ -53,7 +53,7 @@ class Rooms(GitterObject):
 
     def disconnect(self):
         for room in self._rooms:
-            room.disconnect()
+            self._rooms[room].disconnect()
 
     # mapping interface
     def __getitem__(self, key):
@@ -98,7 +98,6 @@ class Room(GitterObject):
         self._net = net
         self._auth = auth
         self._messages = Messages(self)
-        self._outbox = {}
         self._events = None
 
         self.id = None
@@ -120,7 +119,8 @@ class Room(GitterObject):
             self.readJson(json)
 
     ready = pyqtSignal()
-    messagesReady = pyqtSignal([int])
+    messagesReceived = pyqtSignal(str)
+    messageSent = pyqtSignal(str)
 
     def readJson(self, json):
         for key in json:
@@ -149,18 +149,20 @@ class Room(GitterObject):
 
         url.setQuery(query)
         req = makeRequest(url, self._auth)
-        resp = self._net.get(req)
-        resp.finished.connect(lambda: self.readMessages(resp))
+        reply = self._net.get(req)
+        reply.finished.connect(lambda: self.readMessages(reply))
 
     @pyqtSlot()
-    def readMessages(self, resp):
-        messages = readResponse(resp)
-        new_messages = []
-        for json_message in messages:
-            message = Message(json=json_message)
-            self._messages[message.id] = message
-            new_messages.append(message.id)
-        self.messagesReady.emit(new_messages)
+    def readMessages(self, reply):
+        messages = readResponse(reply)
+        if messages:
+            new_messages = []
+            for json_message in messages:
+                message = Message(json=json_message)
+                if message.id not in self._messages:
+                    self._messages[message.id] = message
+                    new_messages.append(message.id)
+            self.messagesReceived.emit(new_messages)
 
     def startMessageStream(self):
         """Open a socket to this room and listen for events
@@ -179,14 +181,16 @@ class Room(GitterObject):
         """Receive an event from the socket
         """
         json_message = readLongResponse(response)
-        logger.debug('receiveMessage: %s', pformat(json_message))
         if json_message:
+            logger.debug('receiveMessage: %s', pformat(json_message))
             message = Message(json=json_message)
-            self._messages[message.id] = message
-            self.messagesReady.emit([message.id])
+            if message.id not in self._messages:
+                self._messages[message.id] = message
+                self.messagesReceived.emit(message.id)
 
     def disconnect(self):
         if isinstance(self._events, QNetworkRequest):
+            self._events.abort()
             self._events.finished.disconnect(self.startEventStream)
 
     def sendMessage(self, text):
@@ -199,15 +203,19 @@ class Room(GitterObject):
         req = makeRequest(url, self._auth)
         req.setRawHeader('Content-Type', 'application/json')
         reply = self._net.post(req, message)
-        self._net.finished.connect(lambda: self.sentMessage(reply))
+        reply.finished.connect(lambda: self.sentMessage(reply))
 
+    @pyqtSlot()
     def sentMessage(self, reply):
         data = readResponse(reply)
-        logger.debug("sentMessage: %s", pformat(data))
         if data:
             message = Message(json=data)
             self._messages[message.id] = message
-            self.messagesReady.emit([message.id])
+            self.messageSent.emit(message.id)
+
+    @property
+    def messages(self):
+        return self._messages
 
 
 class Messages(collections.MutableMapping):

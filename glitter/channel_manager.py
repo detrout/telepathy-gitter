@@ -21,12 +21,15 @@
 
 import logging
 from string import ascii_letters, digits
+import itertools
 
 import telepathy
 
-from glitter.channel.im import GlitterImChannel
-from glitter.channel.muc import GlitterMucChannel
-from glitter.channel.conference import GlitterConferenceChannel
+# from glitter.channel.im import GlitterImChannel
+# from glitter.channel.muc import GlitterMucChannel
+# from glitter.channel.conference import GlitterConferenceChannel
+
+from glitter.channel.text import GlitterTextChannel
 
 __all__ = ['GlitterChannelManager']
 
@@ -74,11 +77,12 @@ def escape_as_identifier(identifier):
 
 
 class GlitterChannelManager(telepathy.server.ChannelManager):
-    __text_channel_id = 1
+    __text_channel_id = itertools.count()
     __media_channel_id = 1
     __ft_channel_id = 1
 
     def __init__(self, connection, protocol):
+        logger.debug("GlitterChannelManager: %s %s", connection, protocol)
         telepathy.server.ChannelManager.__init__(self, connection)
 
         self.set_requestable_channel_classes(protocol.requestable_channels)
@@ -89,28 +93,13 @@ class GlitterChannelManager(telepathy.server.ChannelManager):
     def _get_text_channel(self, props, conversation=None):
         _, surpress_handler, handle = self._get_type_requested_handle(props)
 
-        logger.debug('New text channel')
+        path = "TextChannel%d" % (next(self.__text_channel_id),)
 
-        path = "TextChannel%d" % self.__text_channel_id
-        self.__text_channel_id += 1
+        logger.debug('New text channel %s', path)
 
-        # Normal 1-1 chat
-        if handle.get_type() == telepathy.HANDLE_TYPE_CONTACT:
-            channel = GlitterImChannel(self._conn, self, conversation, props,
-                object_path=path)
-
-        # MUC which has been upgraded from a 1-1 chat
-        elif handle.get_type() == telepathy.HANDLE_TYPE_NONE \
-                and telepathy.CHANNEL_INTERFACE_CONFERENCE + '.InitialChannels' in props:
-            channel = GlitterConferenceChannel(self._conn, self, conversation, props,
-                object_path=path)
-
-        # MUC invite
-        elif handle.get_type() == telepathy.HANDLE_TYPE_NONE:
-            channel = GlitterMucChannel(self._conn, self, conversation, props,
-                object_path=path)
-
-        else:
-            raise telepathy.NotImplemented('Only contacts are allowed')
+        handle = props.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle')
+        room = self._conn.roomFromHandle(handle)
+        channel = GlitterTextChannel(self._conn, self, room, props,
+                                     object_path=path)
 
         return channel

@@ -124,7 +124,7 @@ class GlitterContacts(
             if contact == self._contact_handles[handle]:
                 return handle
 
-        newContactHandle(self, [contact], sender)
+        self.newContactHandle(self, [contact], sender)
 
     def newContactHandles(self, contacts, sender):
         logger.debug("newContactHandles: %s", contacts)
