@@ -53,7 +53,6 @@ class GlitterConnection(
             self._manager = weakref.proxy(manager)
             self._account = {'account': parameters['account'],
                              'token': parameters['token']}
-            self._channel_manager = GlitterChannelManager(self, protocol)
 
             # Call parent initializers
             telepathy.server.Connection.__init__(
@@ -61,6 +60,7 @@ class GlitterConnection(
             telepathy.server.ConnectionInterfaceRequests.__init__(self)
             GlitterCapabilities.__init__(self)
             GlitterContacts.__init__(self)
+            self._channel_manager = GlitterChannelManager(self, protocol)
 
             self_handle = self.create_handle(
                 telepathy.HANDLE_TYPE_CONTACT,

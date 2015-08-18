@@ -82,8 +82,8 @@ class GlitterChannelManager(telepathy.server.ChannelManager):
     __ft_channel_id = 1
 
     def __init__(self, connection, protocol):
-        logger.debug("GlitterChannelManager: %s %s", connection, protocol)
         telepathy.server.ChannelManager.__init__(self, connection)
+        logger.debug("GlitterChannelManager: %s %s", connection, protocol)
 
         self.set_requestable_channel_classes(protocol.requestable_channels)
 
