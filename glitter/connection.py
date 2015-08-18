@@ -173,7 +173,7 @@ class GlitterConnection(
             handle = telepathy.server.handle.NoneHandle()
         else:
             handle = self.handle(handle_type, handle_id)
-        props = self._generate_props(type, handle, suppress_handler)
+        props = self._generate_props(channel_type, handle, suppress_handler)
         self._validate_handle(props)
 
         channel = channel_manager.channel_for_props(props, signal=False)
