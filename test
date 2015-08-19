@@ -60,16 +60,6 @@ class GlitterApp(QObject):
 
     def StatusChanged(self, status, reason):
         logger.info('status changed: %d', status)
-        if status == telepathy.CONNECTION_STATUS_CONNECTED:
-            self[telepathy.CONNECTION_INTERFACE_CONTACT_LIST].GetContactListAttributes(
-                dbus.Array([], signature="s"),
-                False,
-                reply_handler=self.receive_contact_list,
-                error_handler=error)
-
-    def receive_contact_list(self, contacts):
-        logger.info("Got contacts")
-        pprint(contacts)
 
     def quit(self):
         self[telepathy.CONNECTION].Disconnect(
