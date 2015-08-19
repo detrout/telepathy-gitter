@@ -11,6 +11,7 @@ import telepathy
 
 logger = logging.getLogger(__name__)
 
+
 def error(e):
     print('error', e)
 
@@ -48,6 +49,10 @@ class GlitterApp(QObject):
             return dbus.Interface(obj, dbus_interface=interface)
 
     def test_gitter(self):
+        """test function to cause connection manager to connect
+
+        even when we don't have an account registered correctly
+        """
         logger.info('test')
         self[telepathy.CONNECTION].Connect(
             reply_handler=lambda : None,
@@ -55,16 +60,6 @@ class GlitterApp(QObject):
 
     def StatusChanged(self, status, reason):
         logger.info('status changed: %d', status)
-        if status == telepathy.CONNECTION_STATUS_CONNECTED:
-            self[telepathy.CONNECTION_INTERFACE_CONTACT_LIST].GetContactListAttributes(
-                dbus.Array([], signature="s"),
-                False,
-                reply_handler=self.receive_contact_list,
-                error_handler=error)
-
-    def receive_contact_list(self, contacts):
-        logger.info("Got contacts")
-        pprint(contacts)
 
     def quit(self):
         self[telepathy.CONNECTION].Disconnect(

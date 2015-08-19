@@ -38,7 +38,7 @@ class Rooms(GitterObject):
     ready = pyqtSignal()
 
     def load(self):
-        logger.debug("load")
+        logger.debug("load %d", len(self._rooms))
         url = QUrl("https://api.gitter.im/v1/rooms/")
         req = makeRequest(url, self._auth)
         resp = self._net.get(req)
@@ -47,8 +47,17 @@ class Rooms(GitterObject):
     @pyqtSlot()
     def readResponse(self, resp):
         rooms = readResponse(resp)
-        for room in rooms:
-            self._rooms[room['name']] = Room(self._net, self._auth, json=room)
+        for roomjson in rooms:
+            name = roomjson['name']
+            if name in self._rooms:
+                # update attributes
+                self._rooms[name].readJson(roomjson)
+            else:
+                # create new room
+                self._rooms[name] = Room(self._net, self._auth, json=roomjson)
+            logger.debug('Room: %s %d messages',
+                         name,
+                         len(self._rooms[name].messages))
         self.ready.emit()
 
     def disconnect(self):

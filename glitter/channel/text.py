@@ -89,7 +89,7 @@ class GlitterTextChannel(
             return set()
 
     def _signal_text_sent(self, message_id):
-        logger.debug("_signal-text-sent: %d", message_id)
+        logger.debug("_signal-text-sent: %s", message_id)
         message = self._room.messages[message_id]
         message_type = telepathy.CHANNEL_TEXT_MESSAGE_TYPE_NORMAL
         headers = {'message-sent': message.timestamp,
