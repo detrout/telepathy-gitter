@@ -68,9 +68,6 @@ class GlitterConnection(
             self.set_self_handle(self_handle)
 
             self.__disconnect_reason = telepathy.CONNECTION_STATUS_REASON_NONE_SPECIFIED
-            self._initial_presence = None
-            self._initial_personal_message = None
-
             logger.info("Connection to the account %s created" % account)
 
             self._implement_property_get(
