@@ -23,6 +23,7 @@
 
 import weakref
 import logging
+from pprint import pformat
 
 import dbus
 import telepathy
@@ -188,48 +189,37 @@ class GlitterConnection(
         dbus_interface=telepathy.CONNECTION_INTERFACE_REQUESTS,
         in_signature='a{sv}',
         out_signature='oa{sv}',
-        async_callbacks=('_success', '_error'))
-    def CreateChannel(self, request, _success, _error):
+        async_callbacks=('_success', '_error'),
+        sender_keyword='sender')
+    def CreateChannel(self, request, _success, _error, sender):
         self.check_connected()
         for k, v in request:
             print('Create', k, v)
         channel = request.get(telepathy.CHANNEL_INTERFACE + '.ChannelType')
-        target_type = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandleTypee')
-        handle = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle')
-        targetid = request.get(telepathy.CHANNEL_INTERFACE + '.TargetID')
-        if handle is None and targetid is None:
-            raise InvalidHandle()
-        elif handle is None:
-            pass
-        elif targetid is None:
-            handle = self.ensure_contact_handle(targetid)
+        handle = self.handleFromRequest(request, sender)
         raise NotImplemented()
 
     @dbus.service.method(
         dbus_interface=telepathy.CONNECTION_INTERFACE_REQUESTS,
         in_signature='a{sv}',
         out_signature='boa{sv}',
-        async_callbacks=('_success', '_error'))
-    def EnsureChannel(self, request, _success, _error):
+        async_callbacks=('_success', '_error'),
+        sender_keyword='sender')
+    def EnsureChannel(self, request, _success, _error, sender):
         for key in request:
             logger.debug("EnsureChannel: %s %s", str(key), str(request[key]))
         self.check_connected()
 
         channel_manager = self._channel_manager
-        handle_id = request.get(telepathy.CHANNEL + '.TargetHandle')
-        handle_type = request.get(telepathy.CHANNEL + '.TargetHandleType')
         channel_type = request.get(telepathy.CHANNEL + '.ChannelType')
 
-        if handle_id == telepathy.HANDLE_TYPE_NONE:
-            handle = telepathy.server.handle.NoneHandle()
-        else:
-            handle = self.handle(handle_type, handle_id)
-
+        handle = self.handleFromRequest(request, sender)
         props = self._generate_props(channel_type, handle, True)
+        logger.debug("EnsureChannel props: %s", pformat(props))
         self._validate_handle(props)
 
         yours, channel = channel_manager.channel_for_props(
-            request,
+            props,
             signal=False)
 
         print(_success)
@@ -245,3 +235,21 @@ class GlitterConnection(
             ret.append(dbus.Struct([channel._object_path, props],
                                    signature="oa{sv}"))
         return ret
+
+    def handleFromRequest(self, request, sender):
+        """Find the correct handle from a CHANNEL_INTERFACE request.
+
+        We need TargetHandleType, and either TargetHandle or TargetID
+        """
+        target_type = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandleType')
+        target_handle = request.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle')
+        target_id = request.get(telepathy.CHANNEL_INTERFACE + '.TargetID')
+
+        if target_handle is None and target_id is None:
+            raise telepathy.InvalidHandle()
+        elif target_id:
+            target_handle = self.ensureContactHandle(target_id, sender)
+
+        handle = self.handle(target_type, target_handle)
+        logger.debug("handleFromRequest: %s", str(handle))
+        return handle
