@@ -114,7 +114,6 @@ class GlitterConnection(
                                telepathy.CONNECTION_STATUS_REASON_NONE_SPECIFIED)
             self.__disconnect_reason = telepathy.CONNECTION_STATUS_REASON_NONE_SPECIFIED
             self._gitter_client = GitterClient(self, self._account['token'])
-            print(self._gitter_client)
             self._gitter_client.connected.connect(
                 lambda sender=sender: self.connected(sender))
             self._gitter_client.connect()
