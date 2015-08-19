@@ -9,3 +9,25 @@ I may not ever actually implement useful things like
 authentication. My target is to connect to a room, see
 whats in it and send messages.
 
+* News
+** 2015 Aug 18
+
+By revision ac89b549d55583856c8fffe663fb9f289d3021a9
+core things have started to work. Rooms currently show
+up in the contact list, you can connect to a room and while
+connected send & receive messages.
+
+However I think the name used for received messages is just
+the room name, and not the person writing. (Probably
+because I didn't implement this as a MUC)
+
+Also it doesn't currently download pending messages when
+you reconnect.
+
+There's probably some issues with that because of this bug
+https://bugs.freedesktop.org/show_bug.cgi?id=23844
+with the telepathy spec.
+
+The next things to do are either implement downloading
+pending messages, or convert from using the 1-on-1 chat
+interface to using the MUC version of the telepathy spec.
