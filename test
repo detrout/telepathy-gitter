@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import argparse
 from PyQt5.QtCore import QCoreApplication, QObject, QTimer
 import dbus
 from dbus.mainloop.pyqt5 import DBusQtMainLoop
@@ -74,21 +75,34 @@ class GlitterApp(QObject):
 
 def force_connection(app):
     try:
-        from secret import token
+        from secret import username, token
     except ImportError:
         print("Please create a secret.py with token='gitter token'")
 
-    conn = app.cm.RequestConnection('gitter', {'account': 'detrout', 'token': token})
+    conn = app.cm.RequestConnection('gitter',
+                                    {'account': username,
+                                     'token': token})
     # cheating
     QTimer().singleShot(500, app.test_gitter)
-    QTimer().singleShot(5000, app.quit)
+    QTimer().singleShot(20000, app.quit)
 
-def main():
+def main(cmdline=None):
+    parser = make_parser()
+    args = parser.parse_args(cmdline)
+
     logging.basicConfig(level=logging.DEBUG)
 
     app = GlitterApp(sys.argv)
-    #force_connection(app)
+    if args.test:
+        force_connection(app)
+
     app.exec_()
+
+def make_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', action='store_true', default=False,
+                        help='Force connecting to gitter using token in secret')
+    return parser
 
 if __name__ == "__main__":
     main()
