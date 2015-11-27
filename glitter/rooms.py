@@ -13,6 +13,10 @@ from .grequests import makeRequest, readResponse, readLongResponse
 
 logger = logging.getLogger(__name__)
 
+GITTER_SERVER = 'gitter.im'
+API_VERSION = '/v1/'
+GITTER_API = 'https://api.' + GITTER_SERVER + API_VERSION
+GITTER_STREAM = 'https://stream.' + GITTER_SERVER + API_VERSION
 
 class GitterObject(QObject):
     def __init__(self):
@@ -39,7 +43,7 @@ class Rooms(GitterObject):
 
     def load(self):
         logger.debug("load %d", len(self._rooms))
-        url = QUrl("https://api.gitter.im/v1/rooms/")
+        url = QUrl(GITTER_API + "rooms/")
         req = makeRequest(url, self._auth)
         resp = self._net.get(req)
         resp.readyRead.connect(lambda: self.readResponse(resp))
@@ -142,7 +146,7 @@ class Room(GitterObject):
     def loadMessages(self, skip=None, beforeId=None, afterId=None, limit=50):
         logger.debug("listMessages")
         url = QUrl(
-            "https://api.gitter.im/v1/rooms/{}/chatMessages".format(self.id)
+            GITTER_API + "/rooms/{}/chatMessages".format(self.id)
         )
         query = QUrlQuery()
         if skip:
@@ -178,7 +182,7 @@ class Room(GitterObject):
         """
         logger.debug("startMessageStream")
         url = QUrl(
-            "https://stream.gitter.im/v1/rooms/{}/chatMessages".format(self.id)
+            GITTER_STREAM + "rooms/{}/chatMessages".format(self.id)
         )
         req = makeRequest(url, self._auth)
         self._events = self._net.get(req)
@@ -198,13 +202,15 @@ class Room(GitterObject):
                 self.messagesReceived.emit(message.id)
 
     def disconnect(self):
+        logger.debug("disconnect")
         if isinstance(self._events, QNetworkRequest):
             self._events.abort()
             self._events.finished.disconnect(self.startEventStream)
+        self.saveLastMessageId()
 
     def sendMessage(self, text):
         url = QUrl(
-            "https://api.gitter.im/v1/rooms/{}/chatMessages".format(self.id)
+            GITTER_API + "rooms/{}/chatMessages".format(self.id)
         )
         body = {'text': text}
         message = json.dumps(body)
