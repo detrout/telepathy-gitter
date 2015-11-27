@@ -140,7 +140,8 @@ class GlitterTextChannel(
         raise NotImplemented()
 
     def Close(self):
-        logger.debug("Close")
+        logger.debug("Close %s %s %s", self._room, type(self._room), self._room.messages.last_id)
+        self._room.saveLastMessageId()
         if self._room is not None:
             self._room.disconnect()
         telepathy.server.ChannelTypeText.Close(self)
