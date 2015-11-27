@@ -227,7 +227,7 @@ class GlitterContacts(
         to set both ContactList/subscribe and ContactList/publish
         """
         logger.debug("GetSubscription: %s", str(handles))
-        return [SUBSCRIPTION_STATE_YES for h in handles]
+        return [telepathy.SUBSCRIPTION_STATE_YES for h in handles]
 
     @dbus.service.method(telepathy.CONNECTION_INTERFACE_CONTACT_LIST,
                          in_signature='asb',
