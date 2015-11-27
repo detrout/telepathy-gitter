@@ -116,6 +116,12 @@ class GlitterContacts(
         self.newContactHandle(self, [contact], sender)
 
     def newContactHandles(self, contacts, sender):
+        """Create Contact Handles
+
+        Parameters:
+          contacts: a list of glitter rooms
+          sender: dbus sender ID
+        """
         logger.debug("newContactHandles: %s", contacts)
         if not hasattr(self, '_contact_handles'):
             self._contact_handles = {}
