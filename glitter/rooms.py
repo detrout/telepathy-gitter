@@ -35,7 +35,7 @@ class Rooms(GitterObject):
     def __init__(self, net, auth, manager):
         super().__init__()
         self._net = net
-        self._auth = auth
+        self._auth = auth.encode('utf-8')
         self._manager = manager
         self._rooms = {}
 

@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 def makeRequest(url, token):
     logger.debug("makeRequest: %s", url)
     req = QNetworkRequest(url)
-    req.setRawHeader("Accept", "application/json")
-    req.setRawHeader("Authorization", 'Bearer ' + token)
+    req.setRawHeader(b"Accept", b"application/json")
+    req.setRawHeader(b"Authorization", b'Bearer ' + bytes(token))
     return req
 
 
