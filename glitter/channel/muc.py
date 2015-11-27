@@ -54,8 +54,8 @@ class GlitterMucChannel(
         # Group interface, only removing ourself is supported
         if int(self._conn.self_handle) in contacts:
             self.Close()
-        else :
-            raise telepathy.PermissionDenied
+        else:
+            raise telepathy.PermissionDenied()
 
     # papyon.event.ConversationEventInterface
     def on_conversation_user_joined(self, contact):
