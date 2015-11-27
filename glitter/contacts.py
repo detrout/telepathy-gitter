@@ -44,7 +44,7 @@ class GlitterContacts(
         telepathy.CONNECTION_INTERFACE_CONTACT_GROUPS: 'groups', 
         telepathy.CONNECTION_INTERFACE_CONTACT_BLOCKING: 'blocked',
         telepathy.CONNECTION_INTERFACE_SIMPLE_PRESENCE: 'presence',
-        #telepathy.CONNECTION_INTERFACE_ALIASING: 'alias',
+        # telepathy.CONNECTION_INTERFACE_ALIASING: 'alias',
         # telepathy.CONNECTION_INTERFACE_AVATARS: 'token',
         telepathy.CONNECTION_INTERFACE_CAPABILITIES: 'caps',
         telepathy.CONNECTION_INTERFACE_CONTACT_CAPABILITIES: 'capabilities'
@@ -130,6 +130,7 @@ class GlitterContacts(
             telepathy.HANDLE_TYPE_CONTACT,
             contacts,
             sender=sender)
+
         for handle, name in zip(handles, contacts):
             self._contact_handles[handle] = name
 
