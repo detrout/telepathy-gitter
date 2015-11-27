@@ -92,13 +92,13 @@ class GlitterTextChannel(
         logger.debug("_signal-text-sent: %s", message_id)
         message = self._room.messages[message_id]
         message_type = telepathy.CHANNEL_TEXT_MESSAGE_TYPE_NORMAL
-        headers = {'message-sent': message.timestamp,
+        headers = {'message-sent': message.sent_timestamp,
                    'message-type': message_type}
         plain = {'content-type': 'text/plain',
                  'content': message.text}
         html = {'content-type': 'text/html',
                 'content': message.html}
-        self.Sent(message.timestamp, message_type, message.text)
+        self.Sent(message.sent_timestamp, message_type, message.text)
         self.MessageSent([headers, plain, html], 0, '')
 
     def _signal_text_received(self, message_id):
@@ -108,7 +108,7 @@ class GlitterTextChannel(
         message = self._room.messages[message_id]
 
         headers = dbus.Dictionary({
-            'message-received': dbus.UInt64(message.timestamp),
+            'message-received': dbus.UInt64(message.sent_timestamp),
             'pending-message-id': pending_id,
             'message-sender': 0,
             'message-type': telepathy.CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
@@ -126,7 +126,7 @@ class GlitterTextChannel(
                                    signature='a{sv}')
 
         self.Received(pending_id,
-                      message.timestamp,
+                      message.sent_timestamp,
                       0,
                       message_type,
                       0, message.text)
