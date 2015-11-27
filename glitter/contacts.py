@@ -36,6 +36,7 @@ class GlitterContacts(
         telepathy.server.ConnectionInterfaceContactGroups,
         telepathy.server.ConnectionInterfaceContactBlocking,
         telepathy.server.ConnectionInterfaceAliasing,
+        telepathy.server.ConnectionInterfaceSimplePresence,
 ):
     attributes = {
         telepathy.CONNECTION: 'contact-id',
@@ -56,7 +57,7 @@ class GlitterContacts(
         telepathy.server.ConnectionInterfaceContactGroups.__init__(self)
         telepathy.server.ConnectionInterfaceContactBlocking.__init__(self)
         telepathy.server.ConnectionInterfaceAliasing.__init__(self)
-        #telepathy.server.ConnectionInterfaceSimplePresence.__init__(self)
+        telepathy.server.ConnectionInterfaceSimplePresence.__init__(self)
 
         self._implement_property_get(
             telepathy.CONNECTION_INTERFACE_CONTACTS,
@@ -84,17 +85,24 @@ class GlitterContacts(
             {'ContactBlockingCapabilities': lambda: 0}
         )
 
-        self._contact_list_state = CONTACT_LIST_STATE_NONE
+        self._implement_property_get(
+            telepathy.CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+            {'Statuses': self.GetStatuses,
+             'MaximumStatusMessageLength': lambda: 0}
+        )
+        self._contact_list_state = telepathy.CONTACT_LIST_STATE_NONE
 
     def get_contact_attribute_interfaces(self):
         return list(self.attributes.keys())
 
     def update_handles(self, sender):
         self.newContactHandles(self._gitter_client._rooms, sender)
-        state = (SUBSCRIPTION_STATE_YES, SUBSCRIPTION_STATE_YES, '')
+        state = (telepathy.SUBSCRIPTION_STATE_YES,
+                 telepathy.SUBSCRIPTION_STATE_YES,
+                 '')
         changes = {h: state for h in self._contact_handles}
         removals = {}
-        self.contact_list_state = CONTACT_LIST_STATE_SUCCESS
+        self.contact_list_state = telepathy.CONTACT_LIST_STATE_SUCCESS
         self.ContactsChangedWithID(changes, self._contact_handles, removals)
         self.ContactsChanged(changes, removals)
 
@@ -256,5 +264,85 @@ class GlitterContacts(
         logger.debug("GetAliases")
         ret = dbus.Dictionary(singnature="a{us}")
         return ret
-
     ### End Aliasing interface
+
+    ### Start SimplePresence
+    presence_to_id = {
+        'available': telepathy.CONNECTION_PRESENCE_TYPE_AVAILABLE,
+        'away': telepathy.CONNECTION_PRESENCE_TYPE_AWAY,
+        'busy': telepathy.CONNECTION_PRESENCE_TYPE_BUSY,
+        'error': telepathy.CONNECTION_PRESENCE_TYPE_ERROR,
+        'xa': telepathy.CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY,
+        'offline': telepathy.CONNECTION_PRESENCE_TYPE_OFFLINE,
+    }
+    id_to_presence = {
+        telepathy.CONNECTION_PRESENCE_TYPE_AVAILABLE: 'available',
+        telepathy.CONNECTION_PRESENCE_TYPE_AWAY: 'away',
+        telepathy.CONNECTION_PRESENCE_TYPE_BUSY: 'busy',
+        telepathy.CONNECTION_PRESENCE_TYPE_ERROR: 'error',
+        telepathy.CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY: 'xa',
+        telepathy.CONNECTION_PRESENCE_TYPE_OFFLINE: 'offline',
+    }
+
+    @dbus.service.method(
+        dbus_interface=telepathy.CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+        in_signature="ss",
+        out_signature="")
+    def SetPresence(self, status, status_message):
+        self._simple_presence_status = GlitterContacts.presence_to_id.get(status, None)
+        self._simple_presence_message = status_message
+
+    @dbus.service.method(
+        dbus_interface=telepathy.CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+        in_signature="au",
+        out_signature="a{u(uss)}")
+    def GetPresences(self, handles):
+        logger.debug("GetPresences: %s", handles)
+        ret = dbus.Dictionary(signature="u(uss)")
+        for handle in handles:
+            # return our status
+            if handle == int(self._self_handle):
+                status_id = getattr(self, "_simple_presence_status", None)
+                if status_id is None:
+                    status_id = telepathy.CONNECTION_PRESENCE_TYPE_OFFLINE
+                status = GlitterContacts.id_to_presence[status_id]
+                message = getattr(self, "_simple_presence_message", "")
+            else:
+                status_id = telepathy.CONNECTION_PRESENCE_TYPE_AVAILABLE
+                status = "available"
+                message = ""
+            ret[handle] = dbus.Struct((status_id, status, message),
+                                       signature="(uss)")
+
+        logger.debug("GetPresences ret: %s", pformat(ret))
+        return ret
+
+    def GetStatuses(self):
+        logger.debug("GetStatuses")
+        ret = dbus.Dictionary(signature="s(ubb)")
+        for name in GlitterContacts.presence_to_id:
+            may_set_on_self = True
+            can_have_message = False
+            if name in ('error',):
+                may_set_on_self = False
+
+            ret[name] = dbus.Struct(
+                (GlitterContacts.presence_to_id[name],
+                 may_set_on_self,
+                 can_have_message), signature="ubb")
+        return ret
+    def GetStatuses(self):
+        logger.debug("GetStatuses")
+        ret = dbus.Dictionary(signature="s(ubb)")
+        for name in GlitterContacts.presence_to_id:
+            may_set_on_self = True
+            can_have_message = False
+            if name in ('error',):
+                may_set_on_self = False
+
+            ret[name] = dbus.Struct(
+                (GlitterContacts.presence_to_id[name],
+                 may_set_on_self,
+                 can_have_message), signature="ubb")
+        return ret
+    ### End SimplePresence
