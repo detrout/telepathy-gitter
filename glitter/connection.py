@@ -222,7 +222,6 @@ class GlitterConnection(
             props,
             signal=False)
 
-        print(_success)
         _success(yours, channel._object_path,
                  channel.get_immutable_properties())
         self.signal_new_channels([channel])
