@@ -29,6 +29,7 @@ __all__ = ['GlitterMucChannel']
 
 logger = logging.getLogger('Glitter.MucChannel')
 
+
 class GlitterMucChannel(
         GlitterTextChannel,
         telepathy.server.ChannelInterfaceGroup):
