@@ -25,19 +25,6 @@ import telepathy.errors
 import dbus
 
 
-from telepathy.constants import (
-    CONTACT_LIST_STATE_NONE,
-    CONTACT_LIST_STATE_WAITING,
-    CONTACT_LIST_STATE_FAILURE,
-    CONTACT_LIST_STATE_SUCCESS,
-
-    SUBSCRIPTION_STATE_UNKNOWN,
-    SUBSCRIPTION_STATE_NO,
-    SUBSCRIPTION_STATE_REMOVED_REMOTELY,
-    SUBSCRIPTION_STATE_ASK,
-    SUBSCRIPTION_STATE_YES,
-)
-
 __all__ = ['GlitterContacts']
 
 logger = logging.getLogger('Glitter.Contacts')
