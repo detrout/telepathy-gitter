@@ -1,4 +1,6 @@
+import configparser
 import logging
+import os
 from pprint import pformat
 import datetime
 import json
@@ -6,7 +8,7 @@ import collections
 import pytz
 
 from PyQt5.QtCore import (
-    QUrl, QUrlQuery, QTimer, QObject, pyqtSlot, pyqtSignal
+    QUrl, QUrlQuery, QTimer, QObject, pyqtSlot, pyqtSignal, QStandardPaths
 )
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from .grequests import makeRequest, readResponse, readLongResponse
@@ -106,6 +108,8 @@ ROOM_ATTRIBUTES = ['id', 'name', 'topic', 'uri', 'oneToOne',
 
 
 class Room(GitterObject):
+    __last_message_attribute = 'last_message_id'
+
     def __init__(self, net, auth, json=None):
         super().__init__()
         self._net = net
@@ -131,9 +135,29 @@ class Room(GitterObject):
         if json:
             self.readJson(json)
 
+        if len(self._messages) == 0:
+            self.loadLastMessageId()
+
     ready = pyqtSignal()
     messagesReceived = pyqtSignal(str)
     messageSent = pyqtSignal(str)
+    newEarliestMessage = pyqtSignal(str)
+    newLatestMessage = pyqtSignal(str)
+
+    @property
+    def config(self):
+        """Return an initialized config parser
+        """
+        config = configparser.ConfigParser()
+        if os.path.exists(self.configFilename):
+            config.read([self.configFilename])
+        return config
+
+    @property
+    def configFilename(self):
+        datapath = QStandardPaths.writableLocation(QStandardPaths.DataLocation)
+        filename = os.path.join(datapath, 'glitter.ini')
+        return filename
 
     def readJson(self, json):
         for key in json:
@@ -142,6 +166,20 @@ class Room(GitterObject):
 
     def __str__(self):
         return self.name
+
+    def loadLastMessageId(self):
+        config = self.config
+        if self.name in config:
+            return config[self.name][self.__last_message_attribute]
+
+    def saveLastMessageId(self):
+        config = self.config
+        last_id = self.messages.last_id
+        logger.debug("saving last id: %s", last_id)
+        if last_id:
+            config[self.name][self.__last_message_attribute] = last_id
+        with open(self.configFilename, 'wt') as outstream:
+            config.write(outstream)
 
     def loadMessages(self, skip=None, beforeId=None, afterId=None, limit=50):
         logger.debug("listMessages")
@@ -155,7 +193,7 @@ class Room(GitterObject):
             query.addQueryItem("beforeId", str(beforeId))
         if afterId:
             query.addQueryItem("afterId", str(afterId))
-        elif self._messages.last_id():
+        elif self._messages.last_id:
             query.addQueryItem("afterId", str(self._messages.last_id()))
         if limit:
             query.addQueryItem("limit", str(limit))
@@ -238,6 +276,10 @@ class Messages(collections.MutableMapping):
         super().__init__()
         self._room = room
         self._messages = collections.OrderedDict()
+        self._earliest_timestamp = None
+        self._earliest_id = None
+        self._latest_timestamp = None
+        self._latest_id = None
 
     def __getitem__(self, key):
         return self._messages[key]
@@ -245,6 +287,12 @@ class Messages(collections.MutableMapping):
     def __setitem__(self, key, value):
         if not isinstance(value, Message):
             raise ValueError("We only store Messages")
+        if self._latest_id is None or value.sent_timestamp > self._latest_timestamp:
+            self._latest_id = value.id
+            self._room.newLatestMessage.emit(self._latest_id)
+        if self._earliest_id is None or value.sent_timestamp < self._earliest_timestamp:
+            self._earliest_id = value.id
+            self._room.newEarliestMessage.emit(self._earliest_id)
         self._messages[key] = value
 
     def __delitem__(self, key):
@@ -256,13 +304,13 @@ class Messages(collections.MutableMapping):
     def __len__(self):
         return len(self._messages)
 
+    @property
     def last_id(self):
-        if len(self._messages) > 0:
-            return self._messages[-1].id
+        return self._latest_id
 
+    @property
     def earliest_id(self):
-        if len(self._messages) > 0:
-            return self._messages[0].id
+        return self._earliest_id
 
 
 class Message(GitterObject):
@@ -301,7 +349,7 @@ class Message(GitterObject):
         print(self.sent, self.text)
 
     @property
-    def timestamp(self):
+    def sent_timestamp(self):
         if self.sent:
             return int(self.sent.timestamp())
 
