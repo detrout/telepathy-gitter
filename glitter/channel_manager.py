@@ -94,11 +94,15 @@ class GlitterChannelManager(telepathy.server.ChannelManager):
         _, surpress_handler, handle = self._get_type_requested_handle(props)
 
         path = "TextChannel%d" % (next(self.__text_channel_id),)
-
         logger.debug('New text channel %s', path)
 
         handle = props.get(telepathy.CHANNEL_INTERFACE + '.TargetHandle')
         room = self._conn.roomFromHandle(handle)
+
+        # if room.oneToOne:
+        #     channel = GlitterImChannel(self._conn, self, room, props,
+        #                                object_path=path)
+        # else:
         channel = GlitterTextChannel(self._conn, self, room, props,
                                      object_path=path)
 
