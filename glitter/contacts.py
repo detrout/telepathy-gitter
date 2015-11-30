@@ -338,18 +338,4 @@ class GlitterContacts(
                  may_set_on_self,
                  can_have_message), signature="ubb")
         return ret
-    def GetStatuses(self):
-        logger.debug("GetStatuses")
-        ret = dbus.Dictionary(signature="s(ubb)")
-        for name in GlitterContacts.presence_to_id:
-            may_set_on_self = True
-            can_have_message = False
-            if name in ('error',):
-                may_set_on_self = False
-
-            ret[name] = dbus.Struct(
-                (GlitterContacts.presence_to_id[name],
-                 may_set_on_self,
-                 can_have_message), signature="ubb")
-        return ret
     ### End SimplePresence
